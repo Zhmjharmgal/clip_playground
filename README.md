@@ -1,37 +1,43 @@
 # Minimal CLIP Web Demo
 
-一个最简单的网页 demo：输入一段文本或上传一张图，后端调用 CLIP 模型做编码，并把 feature vector 返回给前端展示。
+A minimal web demo where users can:
+- Enter text
+- Upload an image
+- Get CLIP feature vectors for text/image
+- See cosine similarity when both are provided
 
-## 1) 安装依赖
+The backend uses `openai/clip-vit-base-patch32` and returns normalized vectors.
+
+## 1) Install Dependencies
 
 ```bash
 uv sync
 ```
 
-首次运行会下载模型（`openai/clip-vit-base-patch32`）。
+On first run, model files are downloaded from Hugging Face.
 
-## 2) 启动
+## 2) Run Locally
 
 ```bash
 uv run python app.py
 ```
 
-浏览器打开：
+Open:
 
 `http://127.0.0.1:52189`
 
-## 3) Docker 打包（最简单分享）
+## 3) Run with Docker
 
 ```bash
 docker build -t clip-demo:latest .
 docker run --rm -p 52189:52189 clip-demo:latest
 ```
 
-打开：
+Open:
 
 `http://127.0.0.1:52189`
 
-## 4) 发布到 GitHub（给别人链接）
+## 4) Share via GitHub
 
 ```bash
 git init
@@ -42,16 +48,27 @@ git remote add origin https://github.com/<your-username>/<your-repo>.git
 git push -u origin main
 ```
 
-仓库链接就是：
+Repository link format:
 
 `https://github.com/<your-username>/<your-repo>`
 
-## 5) 说明
+## 5) API Response Shape
 
-- 模型：`openai/clip-vit-base-patch32`
-- 设备优先级：`mps`（Apple Silicon）> `cpu`
-- 返回结果包含：
-  - `source`: `text`、`image` 或 `both`
-  - `text`: 文本向量（有文本输入时）
-  - `image`: 图片向量（有图片输入时）
-  - `cosine_similarity`: 同时输入文本和图片时返回
+- `source`: `text`, `image`, or `both`
+- `text`: text vector payload when text input is provided
+  - `dimension`: vector length (typically `512`)
+  - `vector`: normalized CLIP text embedding
+- `image`: image vector payload when image input is provided
+  - `dimension`: vector length (typically `512`)
+  - `vector`: normalized CLIP image embedding
+- `cosine_similarity`: returned only when both text and image are provided
+
+## 6) Runtime Notes
+
+- Device priority: `mps` (Apple Silicon) > `cpu`
+- Default port: `52189`
+- Override port with environment variable:
+
+```bash
+PORT=8000 uv run python app.py
+```
