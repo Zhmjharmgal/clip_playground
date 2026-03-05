@@ -134,12 +134,17 @@
   </head>
   <body>
     <h1>CLIP Feature Vector Demo</h1>
-    <p>Model: <code>{{ model_name }}</code> | Device: <code>{{ device }}</code></p>
+    <p>
+      Model: <code>{{ model_name }}</code> | Device: <code>{{ device }}</code>
+    </p>
 
     <div class="layout">
       <div class="card">
         <label for="textInput">Text Input (Optional)</label>
-        <textarea id="textInput" placeholder="For example: a cat sitting on the grass"></textarea>
+        <textarea
+          id="textInput"
+          placeholder="For example: a cat sitting on the grass"
+        ></textarea>
 
         <div style="margin-top: 6px">
           <label for="imageInput">Image Upload (Optional)</label>
@@ -248,12 +253,20 @@
 
           if (hasText) {
             textBoxEl.style.display = "block";
-            textResultEl.textContent = JSON.stringify(data.text.vector, null, 2);
+            textResultEl.textContent = JSON.stringify(
+              data.text.vector,
+              null,
+              2,
+            );
           }
 
           if (hasImage) {
             imageBoxEl.style.display = "block";
-            imageResultEl.textContent = JSON.stringify(data.image.vector, null, 2);
+            imageResultEl.textContent = JSON.stringify(
+              data.image.vector,
+              null,
+              2,
+            );
           }
 
           if (hasText && hasImage) {
