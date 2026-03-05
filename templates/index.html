@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minimal CLIP Demo</title>
+    <style>
+      body {
+        max-width: 1880px;
+        margin: 8px auto;
+        padding: 0 12px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.3;
+        font-size: 19px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 46px;
+        line-height: 1.1;
+      }
+      p,
+      label,
+      .meta {
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 6px;
+      }
+      .layout {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(420px, 0.9fr) minmax(620px, 1.1fr);
+        align-items: start;
+      }
+      .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 0;
+      }
+      textarea {
+        width: 100%;
+        min-height: 80px;
+        margin-top: 4px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        font-size: 22px;
+        line-height: 1.35;
+      }
+      button {
+        margin-top: 8px;
+        padding: 7px 12px;
+        border-radius: 6px;
+        border: 1px solid #aaa;
+        background: #f4f4f4;
+        font-size: 24px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      input[type="file"] {
+        margin-top: 4px;
+        font-size: 18px;
+      }
+      pre {
+        background: #f6f8fa;
+        padding: 10px;
+        border-radius: 6px;
+        overflow-x: auto;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 18px;
+        line-height: 1.3;
+        max-height: 300px;
+      }
+      .meta {
+        color: #444;
+        margin: 6px 0;
+      }
+      .vectors {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr;
+      }
+      .vectors.two-columns {
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 1200px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 720px) {
+        body {
+          font-size: 17px;
+          padding: 0 14px;
+        }
+        h1 {
+          font-size: 36px;
+        }
+        p,
+        label,
+        .meta {
+          font-size: 20px;
+        }
+        button {
+          font-size: 20px;
+          padding: 8px 12px;
+        }
+        textarea {
+          font-size: 20px;
+          min-height: 90px;
+        }
+        .vectors.two-columns {
+          grid-template-columns: 1fr;
+        }
+      }
+      .vector-box h3 {
+        margin: 0 0 4px;
+        font-size: 28px;
+      }
+      .preview-wrap {
+        margin-top: 6px;
+      }
+      .preview-wrap img {
+        max-width: 100%;
+        max-height: 130px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CLIP Feature Vector Demo</h1>
+    <p>Model: <code>{{ model_name }}</code> | Device: <code>{{ device }}</code></p>
+
+    <div class="layout">
+      <div class="card">
+        <label for="textInput">Text Input (Optional)</label>
+        <textarea id="textInput" placeholder="For example: a cat sitting on the grass"></textarea>
+
+        <div style="margin-top: 6px">
+          <label for="imageInput">Image Upload (Optional)</label>
+          <input id="imageInput" type="file" accept="image/*" />
+        </div>
+        <div class="preview-wrap" id="previewWrap" style="display: none">
+          <div class="meta">Image preview:</div>
+          <img id="imagePreview" alt="Uploaded preview" />
+        </div>
+
+        <button id="runBtn">Encode and Show Vector</button>
+        <p id="status" class="meta"></p>
+      </div>
+
+      <div class="card">
+        <div id="meta" class="meta">No result yet</div>
+        <div id="similarity" class="meta"></div>
+        <div id="vectors" class="vectors">
+          <div id="textBox" class="vector-box" style="display: none">
+            <h3>Text Vector</h3>
+            <pre id="textResult"></pre>
+          </div>
+          <div id="imageBox" class="vector-box" style="display: none">
+            <h3>Image Vector</h3>
+            <pre id="imageResult"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const runBtn = document.getElementById("runBtn");
+      const textInput = document.getElementById("textInput");
+      const imageInput = document.getElementById("imageInput");
+      const statusEl = document.getElementById("status");
+      const metaEl = document.getElementById("meta");
+      const similarityEl = document.getElementById("similarity");
+      const vectorsEl = document.getElementById("vectors");
+      const textBoxEl = document.getElementById("textBox");
+      const imageBoxEl = document.getElementById("imageBox");
+      const textResultEl = document.getElementById("textResult");
+      const imageResultEl = document.getElementById("imageResult");
+      const previewWrapEl = document.getElementById("previewWrap");
+      const imagePreviewEl = document.getElementById("imagePreview");
+
+      let previewObjectUrl = null;
+
+      imageInput.addEventListener("change", () => {
+        const file = imageInput.files[0];
+
+        if (previewObjectUrl) {
+          URL.revokeObjectURL(previewObjectUrl);
+          previewObjectUrl = null;
+        }
+
+        if (!file) {
+          previewWrapEl.style.display = "none";
+          imagePreviewEl.removeAttribute("src");
+          return;
+        }
+
+        previewObjectUrl = URL.createObjectURL(file);
+        imagePreviewEl.src = previewObjectUrl;
+        previewWrapEl.style.display = "block";
+      });
+
+      runBtn.addEventListener("click", async () => {
+        const text = textInput.value.trim();
+        const imageFile = imageInput.files[0];
+
+        if (!text && !imageFile) {
+          statusEl.textContent = "Please enter text or choose an image first.";
+          return;
+        }
+
+        const formData = new FormData();
+        if (text) formData.append("text", text);
+        if (imageFile) formData.append("image", imageFile);
+
+        statusEl.textContent = "Encoding...";
+        similarityEl.textContent = "";
+        textResultEl.textContent = "";
+        imageResultEl.textContent = "";
+        textBoxEl.style.display = "none";
+        imageBoxEl.style.display = "none";
+        vectorsEl.classList.remove("two-columns");
+        metaEl.textContent = "";
+
+        try {
+          const response = await fetch("/embed", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Request failed");
+          }
+
+          const hasText = Boolean(data.text);
+          const hasImage = Boolean(data.image);
+          const textDim = hasText ? data.text.dimension : null;
+          const imageDim = hasImage ? data.image.dimension : null;
+
+          metaEl.textContent = `source=${data.source}, text_dim=${textDim ?? "-"}, image_dim=${imageDim ?? "-"}`;
+
+          if (hasText) {
+            textBoxEl.style.display = "block";
+            textResultEl.textContent = JSON.stringify(data.text.vector, null, 2);
+          }
+
+          if (hasImage) {
+            imageBoxEl.style.display = "block";
+            imageResultEl.textContent = JSON.stringify(data.image.vector, null, 2);
+          }
+
+          if (hasText && hasImage) {
+            vectorsEl.classList.add("two-columns");
+            similarityEl.textContent = `Cosine similarity: ${Number(data.cosine_similarity).toFixed(6)}`;
+          }
+
+          statusEl.textContent = "Done";
+        } catch (err) {
+          statusEl.textContent = `Error: ${err.message}`;
+        }
+      });
+    </script>
+  </body>
+</html>
