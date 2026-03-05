@@ -1,3 +1,11 @@
+---
+title: CLIP Playground
+colorFrom: blue
+colorTo: gray
+sdk: docker
+app_port: 52189
+---
+
 # Minimal CLIP Web Demo
 
 A minimal web demo where users can:
